@@ -44,5 +44,5 @@ VITE_PINATA_API_KEY=<your_pinata_api_key>
 VITE_PINATA_SECRET_API_KEY=<your_pinata_secret>
 GANACHE_URL=http://127.0.0.1:7545
 PRIVATE_KEY=<private_key_of_admin_wallet>
-VITE_CONTRACT_ADDRESS=<deployed_smart_contract_address>
+VITE_CONTRACT_ADDRESS=<deployed_smart_contract_address> (available in ganache contract address)
 VITE_RPC_URL=http://127.0.0.1:7545
