@@ -11,7 +11,7 @@ Follow these steps to set up and run Cypher locally:
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Dipesh-Dubey/cypher-certify-flow.git
 cd cypher
 ```
 
