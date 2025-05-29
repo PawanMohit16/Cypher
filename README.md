@@ -114,5 +114,5 @@ For issues with Pinata access or Firebase setup, contact us.
 
 ---
 
-> Made with 🛠 by the Cypher Team.
+> Made by the Cypher Team.
 #
