@@ -4,7 +4,7 @@ import { updateUser } from './authService';
 import { uploadToPinata } from './ipfsService';
 import { issueCertificateOnChain, validateCertificateOnChain, getCertificateFromChain } from './web3Service';
 import { db } from '../config/firebase';
-import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
 const CERTIFICATES_COLLECTION = 'certificates';
@@ -14,6 +14,11 @@ export const generateCertificate = async (
   data: CertificateData,
   currentUser: User
 ): Promise<Certificate> => {
+  // Validate user is authenticated
+  if (!currentUser?.id) {
+    throw new Error('You must be logged in to generate a certificate');
+  }
+
   // Create certificate with metadata
   const certificateId = uuidv4();
   
@@ -34,52 +39,81 @@ export const generateCertificate = async (
       : undefined,
   };
   
-  // Upload to IPFS via Pinata
-  const ipfsHash = await uploadToPinata(certificateMetadata);
-  
-  if (!ipfsHash) {
-    throw new Error('Failed to upload certificate to IPFS');
-  }
-  
-  // Issue certificate on blockchain
-  const recipientName = `${data.firstName} ${data.lastName}`;
-  await issueCertificateOnChain(recipientName, data.certifiedFor, ipfsHash);
-  
-  // Create the certificate object
-  const certificate: Certificate = {
-    id: certificateId,
-    ipfsHash,
-    issuedBy: currentUser.id,
-    issuedOn: new Date().toISOString(),
-    expiresOn: data.duration 
-      ? new Date(new Date(data.assignedDate).setFullYear(new Date(data.assignedDate).getFullYear() + Number(data.duration))).toISOString()
-      : undefined,
-    ...data
-  };
-  
-  // Add certificate to user's list
-  const updatedUser = {
-    ...currentUser,
-    certificates: [...(currentUser.certificates || []), certificate.id]
-  };
-  updateUser(updatedUser);
-  
-  // Store certificate in Firestore
   try {
-    await addDoc(collection(db, CERTIFICATES_COLLECTION), certificate);
+    // 1. Upload to IPFS
+    const ipfsHash = await uploadToPinata(certificateMetadata);
+    if (!ipfsHash) {
+      throw new Error('Failed to upload certificate to IPFS. Please try again.');
+    }
+
+    // 2. Issue on blockchain
+    const recipientName = `${data.firstName} ${data.lastName}`;
+    const blockchainSuccess = await issueCertificateOnChain(recipientName, data.certifiedFor, ipfsHash);
+    
+    if (!blockchainSuccess) {
+      throw new Error('Failed to record certificate on the blockchain. The certificate was uploaded to IPFS but not recorded on the blockchain.');
+    }
+    
+    // 3. Create the certificate object
+    const certificate: Certificate = {
+      id: certificateId,
+      ipfsHash,
+      issuedBy: currentUser.id,
+      issuedOn: new Date().toISOString(),
+      expiresOn: data.duration 
+        ? new Date(new Date(data.assignedDate).setFullYear(new Date(data.assignedDate).getFullYear() + Number(data.duration))).toISOString()
+        : undefined,
+      ...data
+    };
+    
+    // 4. Store in Firestore
+    try {
+      await addDoc(collection(db, CERTIFICATES_COLLECTION), certificate);
+    } catch (dbError) {
+      console.error('Error storing certificate in Firestore:', dbError);
+      // Don't fail the whole operation if Firestore fails
+      // The certificate is already on IPFS and blockchain
+    }
+    
+    // 5. Update user's certificate list (optional, can be done through Firestore rules)
+    try {
+      const userDocRef = doc(db, 'users', currentUser.id);
+      await updateDoc(userDocRef, {
+        certificates: arrayUnion(certificateId)
+      });
+    } catch (userUpdateError) {
+      console.error('Error updating user document:', userUpdateError);
+      // Non-critical error, continue
+    }
+    
+    return certificate;
+    
   } catch (error) {
-    console.error('Error storing certificate in Firestore:', error);
-    throw new Error('Failed to store certificate');
+    console.error('Error in generateCertificate:', error);
+    
+    // Re-throw with a more user-friendly message
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to perform this action. Please sign in again.');
+    } else if (error.message?.includes('user rejected transaction')) {
+      throw new Error('You rejected the transaction in MetaMask. Please try again.');
+    } else if (error.message?.includes('insufficient funds')) {
+      throw new Error('Insufficient funds for gas. Please ensure your wallet has enough ETH to cover transaction fees.');
+    } else if (error.message) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('Failed to generate certificate. Please try again later.');
   }
-  
-  return certificate;
 };
 
 // Get all certificates
 export const getCertificates = async (): Promise<Certificate[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, CERTIFICATES_COLLECTION));
-    return querySnapshot.docs.map(doc => doc.data() as Certificate);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Certificate));
   } catch (error) {
     console.error('Error getting certificates:', error);
     return [];
@@ -148,11 +182,22 @@ export const validateCertificate = async (hash: string): Promise<{
 // Get user certificates
 export const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
   try {
-    const q = query(collection(db, CERTIFICATES_COLLECTION), where("issuedBy", "==", userId));
+    const q = query(
+      collection(db, CERTIFICATES_COLLECTION),
+      where("issuedBy", "==", userId)
+    );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as Certificate);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Certificate));
   } catch (error) {
     console.error('Error getting user certificates:', error);
-    return [];
+    
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to view these certificates. Please sign in again.');
+    }
+    
+    throw new Error('Failed to load certificates. Please check your connection and try again.');
   }
 };
