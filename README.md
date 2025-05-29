@@ -1,73 +1,117 @@
-# Welcome to your Lovable project
+# 🔐 Cypher - Blockchain Certificate Validator
 
-## Project info
+Welcome to **Cypher**, a decentralized platform for issuing and validating certificates using blockchain and IPFS. Cypher ensures secure, tamper-proof certification by combining smart contracts, IPFS storage, and modern Web3 technologies.
 
-**URL**: https://lovable.dev/projects/59ad3211-159e-4b15-af71-1cb82eb85217
+---
 
-## How can I edit this code???
+## ⚡️ Getting Started
 
-There are several ways of editing your application.
+Follow these steps to set up and run Cypher locally:
 
-**Use Lovable**
+### 1. Clone the Repository
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/59ad3211-159e-4b15-af71-1cb82eb85217) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+git clone <your-repo-url>
+cd cypher
 ```
 
-**Edit a file directly in GitHub**
+### 2. Install Dependencies
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm install
+```
 
-**Use GitHub Codespaces**
+### 3. Create `.env` File
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+At the root of your project, create a `.env` file and add the following environment variables:
 
-## What technologies are used for this project?
+```env
+VITE_PINATA_API_KEY=<your_pinata_api_key>
+VITE_PINATA_SECRET_API_KEY=<your_pinata_secret>
+GANACHE_URL=http://127.0.0.1:7545
+PRIVATE_KEY=<private_key_of_admin_wallet>
+VITE_CONTRACT_ADDRESS=<deployed_smart_contract_address>
+VITE_RPC_URL=http://127.0.0.1:7545
+```
 
-This project is built with:
+### 4. Run Ganache
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Open Ganache and start a new workspace or quickstart project.
+- Ensure it's running on `http://127.0.0.1:7545`.
+- Use one of the accounts' private keys for MetaMask.
 
-## How can I deploy this project?
+### 5. Configure MetaMask
 
-Simply open [Lovable](https://lovable.dev/projects/59ad3211-159e-4b15-af71-1cb82eb85217) and click on Share -> Publish.
+- Import an account from Ganache using its private key.
+- Add a custom network with the following details:
+  - **Network Name:** LocalHost 8545 *(default label)*
+  - **RPC URL:** `http://127.0.0.1:7545`
+  - **Chain ID:** `1337`
+  - **Block Explorer URL:** *(leave blank)*
 
-## Can I connect a custom domain to my Lovable project?
+> 💡 If the wallet balance doesn’t show up, reconnect MetaMask to `localhost` using the above RPC settings and re-import.
 
-Yes it is!
+### 6. Ensure External Services Are Running
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- ✅ **Pinata**: Must be accessible (currently runs best from Mehul's PC).
+- ✅ **Firebase**: Confirm Firebase services are properly initialized.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
+
+## 🚀 Project Progress
+
+### ✅ Features Implemented:
+- Certificate creation and blockchain-based authentication.
+- Storage of certificates on **IPFS**.
+- Validation of certificates using smart contracts.
+- Display of user-issued certificates on the homepage post-login.
+
+> 🚧 Role-based access control (admin vs. user) is **pending** implementation.
+
+---
+
+## 🐞 Known Issues / Bugs
+
+### 🔁 MetaMask Glitch
+- **Problem:** Wallet details (including RPC URL) need to be entered **twice** sometimes.
+- **Cause:** MetaMask may fail to persist custom network data.
+- **Workaround:** Use only the `localhost:7545` connection and **remove all other networks** in MetaMask.
+
+---
+
+## 📦 Recommended RPC Setup for MetaMask + Ganache
+
+| Parameter          | Value                    |
+|--------------------|--------------------------|
+| **RPC URL**        | `http://127.0.0.1:7545`  |
+| **Network Name**   | `LocalHost 8545`         |
+| **Chain ID**       | `1337`                   |
+| **Block Explorer** | *(leave empty)*          |
+
+---
+
+## 🛠 Developer Notes
+
+- Always clear unnecessary MetaMask connections to avoid network issues.
+- Keep `.env` values up to date with contract and account changes.
+- Only use the Ganache testnet (`localhost:7545`) for consistent behavior.
+- Use `npm run dev` to start the frontend locally.
+
+---
+
+## 📌 To-Do (Upcoming Features)
+
+- [ ] Proper role-based separation between admin and users.
+- [ ] Better MetaMask connection handling.
+- [ ] UI enhancements for the certificate dashboard.
+- [ ] Deployment to Polygon Mumbai or another public testnet.
+
+---
+
+## 🙋‍♂️ Questions?
+
+For issues with Pinata access or Firebase setup, contact us.
+
+---
+
+> Made with 🛠 by the Cypher Team.
