@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# 🛠 Cypher - Blockchain Certificate Validator
 
-## Project info
+Welcome to **Cypher**, a decentralized certificate issuance and validation platform built with blockchain, IPFS, and modern web technologies. This README documents the setup, progress, known bugs, and developer environment to help contributors get started quickly.
 
-**URL**: https://lovable.dev/projects/59ad3211-159e-4b15-af71-1cb82eb85217
+---
 
-## How can I edit this code?
+## 🚀 Project Progress
 
-There are several ways of editing your application.
+### ✅ Implemented So Far:
+- Certificate creation and authentication (basic structure done; role-based admin/user separation **pending**).
+- Certificate storage on **IPFS**.
+- Certificate validation mechanism using smart contracts.
+- Certificate display on the homepage upon user login.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/59ad3211-159e-4b15-af71-1cb82eb85217) and start prompting.
+## 🐞 Known Issues / Bugs
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🔁 MetaMask Glitch
+- **Issue:** You need to **enter wallet details twice** (including RPC URL).
+- **Cause:** MetaMask sometimes fails to persist custom network connections.
+- **Temporary Fix:** Use the following RPC configuration strictly and remove all other connections for stability.
 
-**Use your preferred IDE**
+### 🔧 Recommended RPC Setup for Ganache:
+- **RPC URL:** `http://127.0.0.1:7545`
+- **Network Name:** `LocalHost 8545` *(default name shown in MetaMask)*
+- **Chain ID:** `1337`
+- **Block Explorer URL:** *(leave empty)*
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🔑 Ganache Wallet Import
+- Copy-paste private key from Ganache and import directly into MetaMask.
+- If **balance doesn’t appear**, ensure you're connected to the correct `localhost` network (details above).
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## ⚙️ Required Environment Variables
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Create a `.env` file at the root of your project and add the following variables:
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/59ad3211-159e-4b15-af71-1cb82eb85217) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```env
+VITE_PINATA_API_KEY=<your_pinata_api_key>
+VITE_PINATA_SECRET_API_KEY=<your_pinata_secret>
+GANACHE_URL=http://127.0.0.1:7545
+PRIVATE_KEY=<private_key_of_admin_wallet>
+VITE_CONTRACT_ADDRESS=<deployed_smart_contract_address>
+VITE_RPC_URL=http://127.0.0.1:7545
