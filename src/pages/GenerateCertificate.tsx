@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CertificateData } from '@/types/certificate';
 import CertificatePreview from '@/components/CertificatePreview';
 import MetaMaskButton from '@/components/MetaMaskButton';
+import TemplateSelector, { CertificateTemplate } from '@/components/templates/TemplateSelector';
 
 const GenerateCertificate = () => {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ const GenerateCertificate = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [certificate, setCertificate] = useState<any>(null);
   const [isMetaMaskConnected, setIsMetaMaskConnected] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<CertificateTemplate>('classic');
   
   const [formData, setFormData] = useState<CertificateData>({
     firstName: '',
@@ -57,7 +59,8 @@ const GenerateCertificate = () => {
     
     try {
       setIsGenerating(true);
-      const generatedCertificate = await generateCertificate(formData, user);
+      // Pass the selected template to the certificate generation service
+      const generatedCertificate = await generateCertificate({...formData, templateType: selectedTemplate}, user);
       setCertificate(generatedCertificate);
       
       toast({
@@ -96,6 +99,13 @@ const GenerateCertificate = () => {
           <Card className="glass-card order-2 lg:order-1">
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Template Selection */}
+                <div className="mb-6">
+                  <TemplateSelector
+                    selectedTemplate={selectedTemplate}
+                    onSelectTemplate={setSelectedTemplate}
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
@@ -212,8 +222,9 @@ const GenerateCertificate = () => {
           <div className="order-1 lg:order-2">
             <CertificatePreview
               certificate={certificate}
-              preview={formData}
+              preview={!certificate ? formData : undefined}
               user={user}
+              templateType={selectedTemplate}
             />
           </div>
         </div>

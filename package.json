@@ -14,6 +14,7 @@
     "@firebase/auth": "^1.10.0",
     "@firebase/firestore": "^4.7.10",
     "@hookform/resolvers": "^3.9.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
@@ -51,7 +52,9 @@
     "embla-carousel-react": "^8.3.0",
     "ethers": "^5.8.0",
     "firebase": "^11.6.0",
+    "html2canvas": "^1.4.1",
     "input-otp": "^1.2.4",
+    "jspdf": "^3.0.1",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",
@@ -80,11 +83,25 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
+    "hardhat": "^2.24.1",
     "lovable-tagger": "^1.1.7",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "Welcome to **Cypher**, a decentralized platform for issuing and validating certificates using blockchain and IPFS. Cypher ensures secure, tamper-proof certification by combining smart contracts, IPFS storage, and modern Web3 technologies.",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PawanMohit16/Cypher.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PawanMohit16/Cypher/issues"
+  },
+  "homepage": "https://github.com/PawanMohit16/Cypher#readme"
 }

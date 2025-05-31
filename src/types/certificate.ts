@@ -1,4 +1,6 @@
 
+import { CertificateTemplate } from '@/components/templates/TemplateSelector';
+
 export interface CertificateData {
   firstName: string;
   lastName: string;
@@ -7,6 +9,7 @@ export interface CertificateData {
   assignedDate: string;
   duration?: string;
   recipientEmail: string;
+  templateType?: CertificateTemplate;
 }
 
 export interface Certificate extends CertificateData {

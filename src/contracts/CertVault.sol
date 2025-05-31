@@ -1,4 +1,5 @@
-
+// MAIN BLOCKCHAIN FILE 
+// WHEN IT'S DEPLOYED, THE FILE IS
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 

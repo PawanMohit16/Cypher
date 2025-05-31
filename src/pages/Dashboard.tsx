@@ -1,15 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Layout from '@/components/Layout';
-import { Award, CheckCircle, ChevronRight, Download, Eye, Copy, FileCheck } from 'lucide-react';
+import { Award, CheckCircle, ChevronRight, Download, Eye, Copy, FileCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getUserCertificates } from '@/services/certificateService';
 import { Certificate } from '@/types/certificate';
 import { useToast } from '@/hooks/use-toast';
 import CertificatePreview from '@/components/CertificatePreview';
+import { downloadCertificateAsPDF } from '@/utils/downloadUtils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -19,13 +27,26 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const certificatePreviewRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const fetchCertificates = async () => {
       if (user) {
         try {
           const userCerts = await getUserCertificates(user.id);
-          setCertificates(userCerts);
+          
+          // Log certificates to see if template types are present
+          console.log('User certificates:', userCerts);
+          
+          // Ensure all certificates have a templateType
+          const processedCerts = userCerts.map(cert => ({
+            ...cert,
+            templateType: cert.templateType || 'classic' // Default to classic if missing
+          }));
+          
+          setCertificates(processedCerts);
         } catch (error) {
           console.error('Error fetching certificates:', error);
           toast({
@@ -73,7 +94,45 @@ const Dashboard = () => {
   };
 
   const handleView = (cert: Certificate) => {
+    navigate(`/certificate/${cert.id}`);
+  };
+
+  const handleDownload = async (cert: Certificate) => {
+    // First set the selected certificate and show the preview dialog
     setSelectedCertificate(cert);
+    setShowPreviewDialog(true);
+  };
+
+  const downloadSelectedCertificate = async () => {
+    if (!selectedCertificate || !certificatePreviewRef.current) return;
+    
+    setDownloading(true);
+    try {
+      const success = await downloadCertificateAsPDF(certificatePreviewRef.current, selectedCertificate);
+      if (success) {
+        toast({
+          title: 'Certificate Downloaded',
+          description: 'Your certificate has been downloaded successfully.',
+        });
+        // Close the dialog after successful download
+        setShowPreviewDialog(false);
+      } else {
+        toast({
+          title: 'Download Failed',
+          description: 'There was an error downloading your certificate.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'There was an error downloading your certificate.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -159,7 +218,10 @@ const Dashboard = () => {
               </Card>
             ) : certificates.length > 0 ? (
               (showAll ? certificates : certificates.slice(0, 3)).map((cert) => (
-                <Card key={cert.id} className="glass-card">
+                <Card 
+                  key={cert.id} 
+                  className={`glass-card ${cert.templateType === 'modern' ? 'border-l-4 border-blue-500' : cert.templateType === 'minimalist' ? 'border-l-4 border-gray-400' : ''}`}
+                >
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start">
                       <div>
@@ -173,6 +235,15 @@ const Dashboard = () => {
                         <Badge variant="outline" className="text-xs">
                           {cert.organization}
                         </Badge>
+                        {/* Template badge */}
+                        {cert.templateType && cert.templateType !== 'classic' && (
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-xs ${cert.templateType === 'modern' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}
+                          >
+                            {cert.templateType.charAt(0).toUpperCase() + cert.templateType.slice(1)}
+                          </Badge>
+                        )}
                         <CheckCircle className="h-5 w-5 text-green-500" />
                       </div>
                     </div>
@@ -184,6 +255,14 @@ const Dashboard = () => {
                       >
                         <Copy className="h-4 w-4 mr-1" />
                         Copy Hash
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownload(cert)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
                       </Button>
                       <Button
                         size="sm"
@@ -242,7 +321,10 @@ const Dashboard = () => {
                 </Button>
               </div>
               <div className="p-6 overflow-y-auto max-h-[80vh]">
-                <CertificatePreview certificate={selectedCertificate} />
+                <CertificatePreview 
+                  certificate={selectedCertificate} 
+                  templateType={selectedCertificate.templateType || 'classic'}
+                />
               </div>
               <div className="border-t p-4 flex justify-end space-x-2 bg-gray-50 dark:bg-gray-900">
                 <Button
@@ -264,6 +346,58 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+      {/* Certificate Preview Dialog for downloading */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center">
+              <span>Certificate Preview</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPreviewDialog(false)}
+                className="h-8 w-8 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+            <DialogDescription>
+              Review your certificate before downloading
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="my-4">
+            <div ref={certificatePreviewRef} className="certificate-download-container">
+              {selectedCertificate && (
+                <CertificatePreview 
+                  certificate={selectedCertificate} 
+                  templateType={selectedCertificate.templateType} 
+                />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-4">
+            <Button 
+              onClick={downloadSelectedCertificate}
+              disabled={downloading}
+              className="bg-blue-gradient hover:opacity-90"
+            >
+              {downloading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></span>
+                  Downloading...
+                </span>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

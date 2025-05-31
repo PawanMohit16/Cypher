@@ -1,10 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { getCertificateById } from '@/services/certificateService';
+import { downloadCertificateAsPDF } from '@/utils/downloadUtils';
 import { Certificate } from '@/types/certificate';
 import { ArrowLeft, Copy, Download, ExternalLink, Info, QrCode } from 'lucide-react';
 import CertificatePreview from '@/components/CertificatePreview';
@@ -20,14 +21,27 @@ const CertificateDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const { toast } = useToast();
+  const certificateRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (id) {
-      const cert = getCertificateById(id);
-      setCertificate(cert || null);
-      setLoading(false);
-    }
+    const fetchCertificate = async () => {
+      if (id) {
+        try {
+          // Explicitly await the promise and ensure we're getting the resolved value
+          const certResult = await getCertificateById(id);
+          // Use the callback form of setState to avoid any confusion with promises
+          setCertificate(() => certResult || null);
+        } catch (error) {
+          console.error('Error fetching certificate:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchCertificate();
   }, [id]);
 
   const copyToClipboard = (text: string) => {
@@ -36,6 +50,36 @@ const CertificateDetail = () => {
       title: 'Copied to clipboard',
       description: 'The IPFS hash has been copied to your clipboard.',
     });
+  };
+
+  const handleDownload = async () => {
+    if (!certificate || !certificateRef.current) return;
+    
+    setDownloading(true);
+    try {
+      const success = await downloadCertificateAsPDF(certificateRef.current, certificate);
+      if (success) {
+        toast({
+          title: 'Certificate Downloaded',
+          description: 'Your certificate has been downloaded successfully.',
+        });
+      } else {
+        toast({
+          title: 'Download Failed',
+          description: 'There was an error downloading your certificate.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'There was an error downloading your certificate.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (loading) {
@@ -88,9 +132,23 @@ const CertificateDetail = () => {
             </h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="flex items-center gap-1">
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Download</span>
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-1" 
+              onClick={handleDownload}
+              disabled={downloading}
+            >
+              {downloading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></span>
+                  <span className="hidden sm:inline">Downloading...</span>
+                </span>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Download PDF</span>
+                </>
+              )}
             </Button>
             <Button className="bg-blue-gradient hover:opacity-90 flex items-center gap-1">
               <QrCode className="h-4 w-4" />
@@ -101,7 +159,12 @@ const CertificateDetail = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <CertificatePreview certificate={certificate} />
+            <div ref={certificateRef}>
+              <CertificatePreview 
+                certificate={certificate} 
+                templateType={certificate.templateType} 
+              />
+            </div>
           </div>
 
           <div className="lg:col-span-1">

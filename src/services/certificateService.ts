@@ -32,6 +32,7 @@ export const generateCertificate = async (
     assignedDate: data.assignedDate,
     duration: data.duration,
     recipientEmail: data.recipientEmail,
+    templateType: data.templateType || 'classic', // Include template type
     issuedBy: currentUser.id,
     issuedOn: new Date().toISOString(),
     expiresOn: data.duration 
@@ -63,6 +64,7 @@ export const generateCertificate = async (
       expiresOn: data.duration 
         ? new Date(new Date(data.assignedDate).setFullYear(new Date(data.assignedDate).getFullYear() + Number(data.duration))).toISOString()
         : undefined,
+      templateType: data.templateType || 'classic', // Explicitly include template type
       ...data
     };
     
