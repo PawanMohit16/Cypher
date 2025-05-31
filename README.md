@@ -162,4 +162,7 @@ For issues with Pinata access or Firebase setup, contact us.
 ---
 
 > Made by the Cypher Team.
+> Pawan Mohit
+> Mehul Agarwal
+> Dipesh Dubey
 #
