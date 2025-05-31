@@ -8,7 +8,54 @@ Welcome to **Cypher**, a decentralized platform for issuing and validating certi
 
 Follow these steps to set up and run Cypher locally:
 
-### 1. Clone the Repository
+### 1. Install Dependencies
+
+First, install the required dependencies including html2canvas and jspdf for PDF generation:
+
+```bash
+# Install project dependencies
+npm install
+
+# Install PDF generation dependencies
+npm install html2canvas jspdf
+
+# If you're using TypeScript, you might also want to install the type definitions
+npm install --save-dev @types/html2canvas @types/jspdf
+```
+
+### 2. Firebase Configuration
+
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Create a new web app in your Firebase project
+3. Copy the configuration object from Firebase and create a new file at `src/config/firebase.ts` with the following content:
+
+```typescript
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  measurementId: "YOUR_MEASUREMENT_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+export default app;
+```
+
+> **Note:** The `firebase.ts` file is included in `.gitignore` for security reasons. Make sure to keep a backup of your Firebase configuration.
+
+### 3. Clone the Repository
 
 ```bash
 git clone https://github.com/Dipesh-Dubey/cypher-certify-flow.git
