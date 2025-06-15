@@ -48,7 +48,7 @@ const Dashboard = () => {
           
           setCertificates(processedCerts);
         } catch (error) {
-          console.error('Error fetching certificates:', error);
+          console.error('Error fetching certificates: ', error);
           toast({
             title: 'Error',
             description: 'Failed to fetch certificates',
@@ -68,7 +68,7 @@ const Dashboard = () => {
       await navigator.clipboard.writeText(hash);
       toast({
         title: 'Success',
-        description: 'Certificate hash copied to clipboard!',
+        description: 'Certificate hash copied to clipboard!!!',
       });
     } catch (err) {
       // Fallback for older browsers
