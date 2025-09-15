@@ -74,8 +74,8 @@ const ClassicTemplate: React.FC<ClassicTemplateProps> = ({ data, certificate }) 
         <div className="w-full flex justify-between items-center">
           <div className="flex-1"></div>
           <div className="px-4 flex flex-col items-center gap-2">
-            <img src="/image.png" alt="HACKINDIA" className="h-16" />
-            <span className="font-medium text-base">Verified by HACKINDIA</span>
+            <img src="/image.png" alt="CBIT" className="h-16" />
+            <span className="font-medium text-base">Verified by CBIT</span>
           </div>
           <div className="flex-1"></div>
         </div>

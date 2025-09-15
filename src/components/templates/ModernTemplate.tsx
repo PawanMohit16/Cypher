@@ -77,9 +77,9 @@ const ModernTemplate: React.FC<ModernTemplateProps> = ({ data, certificate }) =>
         
         <div className="flex flex-col items-center">
           <div className="p-2 rounded-full bg-blue-50 mb-2">
-            <img src="/image.png" alt="HACKINDIA" className="h-12 w-12 object-contain" />
+            <img src="/logo.png" alt="CBIT" className="h-12 w-12 object-contain" />
           </div>
-          <span className="text-xs text-gray-500">Verified by HACKINDIA</span>
+          <span className="text-xs text-gray-500">Verified by CBIT</span>
         </div>
         
         <div className="certificate-signature text-center">
