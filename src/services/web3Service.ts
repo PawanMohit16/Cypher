@@ -6,6 +6,7 @@ let provider: ethers.providers.Web3Provider | null = null;
 let signer: ethers.Signer | null = null;
 let contract: ethers.Contract | null = null;
 let contractAddress = '';
+let expectedChainId: number | null = null;
 
 // Check if MetaMask is installed
 export const isMetaMaskInstalled = (): boolean => {
@@ -32,6 +33,22 @@ export const connectMetaMask = async (): Promise<string | null> => {
     
     contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
     const rpcUrl = import.meta.env.VITE_RPC_URL || '';
+    const chainIdRaw = import.meta.env.VITE_CHAIN_ID || '';
+
+    // Default to Sepolia chain ID if not provided
+    const DEFAULT_SEPOLIA_CHAIN_ID = 11155111; // 0xaa36a7
+    // Parse chain id from env (supports decimal or hex like 0xaa36a7)
+    const parseChainId = (value: string): number | null => {
+      if (!value) return null;
+      const v = value.trim();
+      if (v.startsWith('0x') || v.startsWith('0X')) {
+        const parsed = parseInt(v, 16);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      const parsed = parseInt(v, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    };
+    expectedChainId = parseChainId(chainIdRaw) ?? DEFAULT_SEPOLIA_CHAIN_ID;
     
     if (!contractAddress) {
       const errorMsg = 'Contract address not found in environment variables. Please check your .env file.';
@@ -57,13 +74,39 @@ export const connectMetaMask = async (): Promise<string | null> => {
       return null;
     }
 
-    if (!rpcUrl) {
-      console.warn('RPC URL not found in environment variables. Using default provider.');
-    } else {
-      // Use custom RPC provider if available
-      provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    // Ensure user is on expected chain
+    const network = await provider.getNetwork();
+    if (expectedChainId && network.chainId !== expectedChainId) {
+      try {
+        await (window as any).ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: ethers.utils.hexValue(expectedChainId) }],
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902 && rpcUrl) {
+          try {
+            await (window as any).ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: ethers.utils.hexValue(expectedChainId),
+                chainName: 'Sepolia',
+                rpcUrls: [rpcUrl],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              }],
+            });
+          } catch (addError) {
+            // fallthrough to toast
+          }
+        }
+        toast({
+          title: 'Wrong Network',
+          description: 'Please switch to the Sepolia network in MetaMask.',
+          variant: 'destructive',
+        });
+        return null;
+      }
     }
-    
+
     // Initialize contract
     contract = new ethers.Contract(contractAddress, CertVaultABI, signer);
     
@@ -115,17 +158,22 @@ export const issueCertificateOnChain = async (
     }
     
     // Show pending transaction toast
-    const pendingToast = toast({
+    toast({
       title: 'Processing Transaction',
       description: 'Please confirm the transaction in MetaMask...',
       duration: 10000, // 10 seconds
     });
     
+    // Optional: estimate gas to surface issues early
+    try {
+      await contract.estimateGas.issueCertificate(recipientName, courseName, hash);
+    } catch (estErr) {
+      console.warn('Gas estimation failed for issueCertificate:', estErr);
+    }
     const tx = await contract.issueCertificate(recipientName, courseName, hash);
     
-    // Update toast to show transaction is being mined
+    // Show a new toast to indicate the transaction is submitted
     toast({
-      id: pendingToast,
       title: 'Transaction Submitted',
       description: 'Waiting for transaction confirmation...',
       duration: 10000,

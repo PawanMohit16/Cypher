@@ -73,12 +73,13 @@ npm install
 At the root of your project, create a `.env` file and add the following environment variables:
 
 ```env
-VITE_PINATA_API_KEY=<your_pinata_api_key>
-VITE_PINATA_SECRET_API_KEY=<your_pinata_secret>
-GANACHE_URL=http://127.0.0.1:7545
-PRIVATE_KEY=<private_key_of_admin_wallet>
 VITE_CONTRACT_ADDRESS=<deployed_smart_contract_address>
 VITE_RPC_URL=http://127.0.0.1:7545
+VITE_CHAIN_ID=0x539
+
+# Server-side only (do NOT prefix with VITE_)
+PINATA_API_KEY=<your_pinata_api_key>
+PINATA_SECRET_API_KEY=<your_pinata_secret>
 ```
 
 ### 4. Run Ganache
@@ -100,8 +101,9 @@ VITE_RPC_URL=http://127.0.0.1:7545
 
 ### 6. Ensure External Services Are Running
 
-- ✅ **Pinata**: Must be accessible (currently runs best from Mehul's PC).
+- ✅ **Pinata**: Use the provided backend proxy (no secrets in the client).
 - ✅ **Firebase**: Confirm Firebase services are properly initialized.
+- ✅ **API Server**: `npm run dev:server` to start the backend proxy for Pinata at `http://localhost:4000`.
 
 ---
 

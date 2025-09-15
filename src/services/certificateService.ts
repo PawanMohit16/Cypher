@@ -154,30 +154,33 @@ export const validateCertificate = async (hash: string): Promise<{
   blockchainValid?: boolean;
 }> => {
   const certificate = await getCertificateByHash(hash);
-  
   if (!certificate) {
     return {
       isValid: false,
       message: 'Certificate not found in our records.'
     };
   }
-  
-  // Check if certificate has expired
-  if (certificate.expiresOn && new Date(certificate.expiresOn) < new Date()) {
-    const isValidOnChain = await validateCertificateOnChain(hash);
+
+  const isValidOnChain = await validateCertificateOnChain(hash);
+
+  if (!isValidOnChain) {
     return {
-      isValid: true,
+      isValid: false,
       certificate,
-      blockchainValid: true,
-      message: 'Certificate has expired. Blockchain verification successful.'
+      blockchainValid: false,
+      message: 'Certificate is not valid on-chain.'
     };
   }
-  
+
+  const isExpired = certificate.expiresOn && new Date(certificate.expiresOn) < new Date();
+
   return {
     isValid: true,
     certificate,
     blockchainValid: true,
-    message: 'Certificate verification successful on blockchain.'
+    message: isExpired
+      ? 'Certificate has expired. Blockchain verification successful.'
+      : 'Certificate verification successful on blockchain.'
   };
 };
 
