@@ -144,7 +144,7 @@ PINATA_SECRET_API_KEY=<your_pinata_secret>
 - Always clear unnecessary MetaMask connections to avoid network issues.
 - Keep `.env` values up to date with contract and account changes.
 - Only use the Ganache testnet (`localhost:7545`) for consistent behavior.
-- Use `npm run dev` to start the frontend locally.
+- Use `npm run dev:full` to start the frontend and backend together locally.
 
 ---
 
