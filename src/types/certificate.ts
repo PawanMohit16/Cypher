@@ -15,7 +15,10 @@ export interface CertificateData {
 export interface Certificate extends CertificateData {
   id: string;
   ipfsHash: string;
+  ipfsUri?: string;
   issuedBy: string;
   issuedOn: string;
   expiresOn?: string;
+  blockchainValid?: boolean;
+  legacySource?: string;
 }

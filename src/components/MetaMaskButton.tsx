@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { connectMetaMask, isMetaMaskInstalled } from '@/services/web3Service';
+import { getConnectedWalletAddress } from '@/services/walletService';
 import { useToast } from '@/hooks/use-toast';
 
 interface MetaMaskButtonProps {
@@ -12,6 +13,37 @@ const MetaMaskButton: React.FC<MetaMaskButtonProps> = ({ onConnect }) => {
   const [address, setAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
+  const onConnectRef = useRef(onConnect);
+
+  useEffect(() => {
+    onConnectRef.current = onConnect;
+  }, [onConnect]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateConnection = async () => {
+      if (!isMetaMaskInstalled()) {
+        return;
+      }
+
+      try {
+        const existingAddress = await getConnectedWalletAddress();
+        if (!cancelled && existingAddress) {
+          setAddress(existingAddress);
+          onConnectRef.current?.(existingAddress);
+        }
+      } catch (error) {
+        console.error('Failed to hydrate MetaMask connection:', error);
+      }
+    };
+
+    void hydrateConnection();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleConnect = async () => {
     setIsConnecting(true);

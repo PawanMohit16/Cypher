@@ -4,9 +4,11 @@ import { Link } from 'react-router-dom';
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
+  asLink?: boolean;
+  to?: string;
 }
 
-const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
+const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true, asLink = true, to = '/' }) => {
   const sizeClasses = {
     sm: 'h-6',
     md: 'h-8',
@@ -19,8 +21,8 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
     lg: 'text-3xl',
   };
 
-  return (
-    <Link to="/" className="flex items-center gap-2">
+  const content = (
+    <>
       <img
         src="/cypher.png"
         alt="Cypher"
@@ -31,6 +33,16 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true }) => {
           Cypher
         </span>
       )}
+    </>
+  );
+
+  if (!asLink) {
+    return <div className="flex items-center gap-2">{content}</div>;
+  }
+
+  return (
+    <Link to={to} className="flex items-center gap-2">
+      {content}
     </Link>
   );
 };

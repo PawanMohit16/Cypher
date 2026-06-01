@@ -36,17 +36,10 @@ const Dashboard = () => {
       if (user) {
         try {
           const userCerts = await getUserCertificates(user.id);
-          
-          // Log certificates to see if template types are present
-          console.log('User certificates:', userCerts);
-          
-          // Ensure all certificates have a templateType
-          const processedCerts = userCerts.map(cert => ({
+          setCertificates(userCerts.map((cert) => ({
             ...cert,
-            templateType: cert.templateType || 'classic' // Default to classic if missing
-          }));
-          
-          setCertificates(processedCerts);
+            templateType: cert.templateType || 'classic',
+          })));
         } catch (error) {
           console.error('Error fetching certificates: ', error);
           toast({
@@ -230,6 +223,11 @@ const Dashboard = () => {
                         <p className="text-xs text-gray-500">
                           Issued on: {new Date(cert.issuedOn).toLocaleDateString()}
                         </p>
+                        <div className="mt-2">
+                          <Badge variant={cert.blockchainValid === false ? 'secondary' : 'default'}>
+                            {cert.blockchainValid === false ? 'Legacy record' : 'On-chain verified'}
+                          </Badge>
+                        </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant="outline" className="text-xs">

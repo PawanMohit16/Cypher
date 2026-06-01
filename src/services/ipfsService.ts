@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { normalizeIPFSHash } from '@/lib/ipfs';
 
 export const uploadToPinata = async (data: any): Promise<string | null> => {
   try {
@@ -23,7 +24,7 @@ export const uploadToPinata = async (data: any): Promise<string | null> => {
       }
     );
     
-    return `ipfs://${response.data.IpfsHash}`;
+    return normalizeIPFSHash(response.data.IpfsHash).raw;
   } catch (error) {
     console.error('IPFS upload error:', error);
     return null;
@@ -32,9 +33,8 @@ export const uploadToPinata = async (data: any): Promise<string | null> => {
 
 export const getFromIPFS = async (ipfsHash: string): Promise<any> => {
   try {
-    // Remove ipfs:// prefix if it exists
-    const hash = ipfsHash.replace('ipfs://', '');
-    const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${hash}`);
+    const { raw } = normalizeIPFSHash(ipfsHash);
+    const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${raw}`);
     return response.data;
   } catch (error) {
     console.error('IPFS fetch error:', error);

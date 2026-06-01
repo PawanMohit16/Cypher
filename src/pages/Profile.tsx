@@ -20,7 +20,46 @@ import {
 const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const userCertificates = user ? getUserCertificates(user.id) : [];
+  const [userCertificates, setUserCertificates] = React.useState<Awaited<ReturnType<typeof getUserCertificates>>>([]);
+  const [loadingCertificates, setLoadingCertificates] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadCertificates = async () => {
+      if (!user) {
+        if (!cancelled) {
+          setUserCertificates([]);
+          setLoadingCertificates(false);
+        }
+        return;
+      }
+
+      setLoadingCertificates(true);
+
+      try {
+        const certificates = await getUserCertificates(user.id);
+        if (!cancelled) {
+          setUserCertificates(certificates);
+        }
+      } catch (error) {
+        console.error('Error fetching profile certificates:', error);
+        if (!cancelled) {
+          setUserCertificates([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingCertificates(false);
+        }
+      }
+    };
+
+    void loadCertificates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -83,7 +122,7 @@ const Profile = () => {
                     </div>
                     <div className="py-3 flex justify-between">
                       <dt className="text-sm font-medium text-gray-500">Certificates</dt>
-                      <dd className="text-sm text-gray-900">{userCertificates.length}</dd>
+                      <dd className="text-sm text-gray-900">{loadingCertificates ? 'Loading...' : userCertificates.length}</dd>
                     </div>
                   </dl>
                 </div>
@@ -124,7 +163,9 @@ const Profile = () => {
                   </TabsList>
                   
                   <TabsContent value="issued">
-                    {userCertificates.length > 0 ? (
+                    {loadingCertificates ? (
+                      <div className="text-center py-12 bg-gray-50 rounded-lg">Loading certificates...</div>
+                    ) : userCertificates.length > 0 ? (
                       <div className="space-y-4">
                         {userCertificates.map((cert) => (
                           <Card key={cert.id} className="overflow-hidden">
@@ -151,7 +192,7 @@ const Profile = () => {
                                     </span>
                                     <span className="flex items-center">
                                       <FileCheck className="h-4 w-4 mr-1" />
-                                      Status: <span className="text-green-600 ml-1">Valid</span>
+                                      Status: <span className={cert.blockchainValid === false ? 'text-amber-600 ml-1' : 'text-green-600 ml-1'}>{cert.blockchainValid === false ? 'Legacy' : 'Valid'}</span>
                                     </span>
                                   </div>
                                   

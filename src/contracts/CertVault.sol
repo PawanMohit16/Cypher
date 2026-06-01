@@ -25,6 +25,53 @@ contract CertVault {
     event AdminAdded(address indexed account);
     event AdminRemoved(address indexed account);
 
+    function _hasPrefix(bytes memory data, bytes memory prefix) internal pure returns (bool) {
+        if (data.length < prefix.length) {
+            return false;
+        }
+
+        for (uint256 i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function _slice(bytes memory data, uint256 start) internal pure returns (string memory) {
+        require(start <= data.length, "Invalid slice");
+
+        bytes memory result = new bytes(data.length - start);
+        for (uint256 i = 0; i < result.length; i++) {
+            result[i] = data[i + start];
+        }
+
+        return string(result);
+    }
+
+    function _normalizeIPFSHash(string memory input) internal pure returns (string memory) {
+        bytes memory data = bytes(input);
+
+        if (_hasPrefix(data, bytes("ipfs://"))) {
+            return _slice(data, 7);
+        }
+
+        if (_hasPrefix(data, bytes("/ipfs/"))) {
+            return _slice(data, 6);
+        }
+
+        if (_hasPrefix(data, bytes("https://gateway.pinata.cloud/ipfs/"))) {
+            return _slice(data, 34);
+        }
+
+        if (_hasPrefix(data, bytes("https://ipfs.io/ipfs/"))) {
+            return _slice(data, 21);
+        }
+
+        return input;
+    }
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
         _;
@@ -62,24 +109,26 @@ contract CertVault {
         require(bytes(_recipientName).length > 0, "Invalid recipient");
         require(bytes(_courseName).length > 0, "Invalid course");
         require(bytes(_ipfsHash).length > 0, "Invalid IPFS hash");
-        bytes32 key = keccak256(abi.encodePacked(_ipfsHash));
+        string memory normalizedHash = _normalizeIPFSHash(_ipfsHash);
+        bytes32 key = keccak256(abi.encodePacked(normalizedHash));
         require(!isValidIPFS[key], "Already issued");
 
         certificates[key] = Certificate({
             recipientName: _recipientName,
             courseName: _courseName,
-            ipfsHash: _ipfsHash,
+            ipfsHash: normalizedHash,
             issuedOn: block.timestamp,
             issuer: msg.sender,
             revokedAt: 0
         });
         isValidIPFS[key] = true;
 
-        emit CertificateIssued(_ipfsHash, _recipientName, _courseName, block.timestamp, msg.sender);
+        emit CertificateIssued(normalizedHash, _recipientName, _courseName, block.timestamp, msg.sender);
     }
 
     function revokeCertificate(string memory _ipfsHash) external {
-        bytes32 key = keccak256(abi.encodePacked(_ipfsHash));
+        string memory normalizedHash = _normalizeIPFSHash(_ipfsHash);
+        bytes32 key = keccak256(abi.encodePacked(normalizedHash));
         require(isValidIPFS[key], "Not issued or already revoked");
         Certificate storage cert = certificates[key];
         require(msg.sender == cert.issuer || isAdmin[msg.sender], "Not issuer/admin");
@@ -87,17 +136,19 @@ contract CertVault {
         isValidIPFS[key] = false;
         cert.revokedAt = block.timestamp;
 
-        emit CertificateRevoked(_ipfsHash, cert.revokedAt, msg.sender);
+        emit CertificateRevoked(normalizedHash, cert.revokedAt, msg.sender);
     }
 
     function validateCertificate(string memory _ipfsHash) public view returns (bool) {
-        bytes32 key = keccak256(abi.encodePacked(_ipfsHash));
+        string memory normalizedHash = _normalizeIPFSHash(_ipfsHash);
+        bytes32 key = keccak256(abi.encodePacked(normalizedHash));
         return isValidIPFS[key];
     }
 
     function getCertificate(string memory _ipfsHash) public view returns (Certificate memory) {
         require(bytes(_ipfsHash).length > 0, "Invalid IPFS hash");
-        bytes32 key = keccak256(abi.encodePacked(_ipfsHash));
+        string memory normalizedHash = _normalizeIPFSHash(_ipfsHash);
+        bytes32 key = keccak256(abi.encodePacked(normalizedHash));
         require(certificates[key].issuedOn != 0, "Certificate does not exist");
         return certificates[key];
     }

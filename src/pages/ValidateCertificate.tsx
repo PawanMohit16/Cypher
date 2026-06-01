@@ -10,6 +10,7 @@ import CertificatePreview from '@/components/CertificatePreview';
 import { ArrowLeft, ExternalLink, Search, Shield, ShieldCheck, ShieldX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MetaMaskButton from '@/components/MetaMaskButton';
+import { getIPFSGatewayUrl } from '@/lib/ipfs';
 
 const ValidateCertificate = () => {
   const { toast } = useToast();
@@ -41,27 +42,34 @@ const ValidateCertificate = () => {
     
     try {
       setIsValidating(true);
+      // First, validate on-chain (blockchain is the source of truth)
       const result = await validateCertificate(hash);
+
       setValidation({
         isValid: result.isValid,
         message: result.message,
-        blockchainValid: result.blockchainValid
+        blockchainValid: result.blockchainValid,
       });
-      
-      setCertificate(result.certificate || null);
-      
-      if (result.isValid) {
-        toast({
-          title: 'Certificate Validated',
-          description: result.message,
-        });
-      } else {
+
+      if (!result.isValid) {
+        // Ensure we do NOT render IPFS data for invalid certificates
+        setCertificate(null);
+
         toast({
           title: 'Validation Error',
-          description: result.message,
+          description: result.message || 'Certificate is not valid on-chain.',
           variant: 'destructive',
         });
+        return;
       }
+
+      // If valid on-chain, then display certificate data (from our DB/IPFS)
+      setCertificate(result.certificate || null);
+
+      toast({
+        title: 'Certificate Validated',
+        description: result.message,
+      });
     } catch (error) {
       toast({
         title: 'Validation Error',
@@ -178,7 +186,7 @@ const ValidateCertificate = () => {
                             <li>
                               <span className="font-medium">IPFS Link:</span>
                               <a 
-                                href={`https://gateway.pinata.cloud/ipfs/${certificate.ipfsHash.replace('ipfs://', '')}`} 
+                                href={getIPFSGatewayUrl(certificate.ipfsHash)} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="ml-1 text-cypher-primary hover:underline flex items-center"
