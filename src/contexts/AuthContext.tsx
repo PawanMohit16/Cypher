@@ -21,6 +21,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
+    // If Firebase isn't configured, skip subscribing and finish loading
+    if (!auth) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     // Subscribe to Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
