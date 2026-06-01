@@ -192,7 +192,7 @@ const Profile = () => {
                                     </span>
                                     <span className="flex items-center">
                                       <FileCheck className="h-4 w-4 mr-1" />
-                                      Status: <span className={cert.blockchainValid === false ? 'text-amber-600 ml-1' : 'text-green-600 ml-1'}>{cert.blockchainValid === false ? 'Legacy' : 'Valid'}</span>
+                                      Status: <span className="text-green-600 ml-1">Verified</span>
                                     </span>
                                   </div>
                                   

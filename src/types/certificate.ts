@@ -21,4 +21,6 @@ export interface Certificate extends CertificateData {
   expiresOn?: string;
   blockchainValid?: boolean;
   legacySource?: string;
+  txHash?: string;
+  ipfsCid?: string;
 }

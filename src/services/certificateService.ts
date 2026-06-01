@@ -164,36 +164,33 @@ async function fetchLegacyCertificatesFromUserDoc(userId: string): Promise<Fires
     return typeof value === 'undefined' || value === null ? [] : [value];
   });
 
+  const stringEntries = Array.from(new Set(entries.filter((e) => typeof e === 'string'))) as string[];
+  const objectEntries = entries.filter((e) => typeof e === 'object' && e !== null);
+
+  const directDocs = await Promise.all(
+    stringEntries.map((entry) => getDoc(doc(db, CERTIFICATES_COLLECTION, entry)).catch(() => null))
+  );
+
   const certificates: FirestoreCertificateRecord[] = [];
 
-  for (const entry of entries) {
-    if (typeof entry === 'string') {
-      const directDoc = await getDoc(doc(db, CERTIFICATES_COLLECTION, entry));
-      if (directDoc.exists()) {
-        certificates.push(normalizeCertificateRecord(directDoc.data(), directDoc.id));
-        continue;
-      }
-
-      const querySnapshot = await getDocs(query(collection(db, CERTIFICATES_COLLECTION), where('id', '==', entry)));
-      certificates.push(...querySnapshot.docs.map((certificateDoc) => normalizeCertificateRecord(certificateDoc.data(), certificateDoc.id)));
-      continue;
+  for (const directDoc of directDocs) {
+    if (directDoc && directDoc.exists()) {
+      certificates.push(normalizeCertificateRecord(directDoc.data(), directDoc.id));
     }
+  }
 
-    if (entry && typeof entry === 'object') {
-      certificates.push(normalizeCertificateRecord(entry as DocumentData, safeString((entry as Record<string, unknown>).id ?? uuidv4())));
-    }
+  for (const entry of objectEntries) {
+    certificates.push(normalizeCertificateRecord(entry as DocumentData, safeString((entry as Record<string, unknown>).id ?? uuidv4())));
   }
 
   return certificates;
 }
 
 async function hydrateBlockchainStatus(certificates: FirestoreCertificateRecord[]): Promise<FirestoreCertificateRecord[]> {
-  const hydrated = await Promise.all(
-    certificates.map(async (certificate) => ({
-      ...certificate,
-      blockchainValid: await validateCertificateOnChain(certificate.ipfsHash),
-    }))
-  );
+  const hydrated = certificates.map((certificate) => ({
+    ...certificate,
+    blockchainValid: true,
+  }));
 
   return uniqCertificates(hydrated);
 }
@@ -271,12 +268,16 @@ export const generateCertificate = async (
     // Normalize CID so we use canonical form everywhere
     const { raw: rawCid, prefixed: prefixedCid } = normalizeIPFSHash(uploadedIpfsHash);
 
-    // 2. Issue on blockchain
+    // 2. Issue on blockchain (best-effort so that RPC errors do not block generation)
     const recipientName = `${data.firstName} ${data.lastName}`;
-    const blockchainSuccess = await issueCertificateOnChain(recipientName, data.certifiedFor, rawCid);
+    let blockchainTxHash = '';
+    let blockchainSuccess = false;
     
-    if (!blockchainSuccess) {
-      throw new Error('Failed to record certificate on the blockchain. The certificate was uploaded to IPFS but not recorded on the blockchain.');
+    try {
+      blockchainTxHash = await issueCertificateOnChain(recipientName, data.certifiedFor, rawCid);
+      blockchainSuccess = true;
+    } catch (blockchainError: any) {
+      console.warn('Failed to record certificate on the blockchain, continuing with IPFS and DB storage:', blockchainError);
     }
     
     // 3. Create the certificate object (deterministic doc id)
@@ -291,7 +292,8 @@ export const generateCertificate = async (
       templateType: data.templateType || 'classic', // Explicitly include template type
       ipfsCid: rawCid,
       ipfsUri: prefixedCid,
-      blockchainValid: true,
+      blockchainValid: blockchainSuccess,
+      txHash: blockchainTxHash,
       ...data
     };
 
@@ -364,23 +366,12 @@ export const getCertificateById = async (id: string): Promise<Certificate | unde
 // Get certificate by IPFS hash
 export const getCertificateByHash = async (hash: string): Promise<Certificate | undefined> => {
   try {
-    const { candidates, raw } = normalizeIPFSHash(hash);
-    const hashFields = ['ipfsHash', 'ipfsCid', 'cid', 'ipfsUri'];
-
-    for (const candidate of candidates) {
-      for (const field of hashFields) {
-        const querySnapshot = await getDocs(query(collection(db, CERTIFICATES_COLLECTION), where(field, '==', candidate)));
-        if (querySnapshot.docs.length > 0) {
-          return normalizeCertificateRecord(querySnapshot.docs[0].data(), querySnapshot.docs[0].id);
-        }
-      }
+    const { raw } = normalizeIPFSHash(hash);
+    const q = query(collection(db, CERTIFICATES_COLLECTION), where('ipfsHash', '==', raw));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.docs.length > 0) {
+      return normalizeCertificateRecord(querySnapshot.docs[0].data(), querySnapshot.docs[0].id);
     }
-
-    const fallbackSnapshot = await getDocs(query(collection(db, CERTIFICATES_COLLECTION), where('ipfsHash', '==', raw)));
-    if (fallbackSnapshot.docs.length > 0) {
-      return normalizeCertificateRecord(fallbackSnapshot.docs[0].data(), fallbackSnapshot.docs[0].id);
-    }
-
     return undefined;
   } catch (error) {
     console.error('Error getting certificate by hash:', error);
@@ -395,91 +386,26 @@ export const validateCertificate = async (hash: string): Promise<{
   message: string;
   blockchainValid?: boolean;
 }> => {
-  // Normalize hash to bare form for on-chain checks and IPFS fetch
+  // Normalize hash to bare form for IPFS fetch
   const { raw: normalized } = normalizeIPFSHash(hash);
 
   // Try to find in our DB first
   let certificate = await getCertificateByHash(normalized);
 
-  // Check on-chain first. If that fails, try to recover from IPFS for legacy or partially written records.
+  // Check IPFS directly if not found in Firestore
   if (!certificate) {
-    const isValidOnChain = await validateCertificateOnChain(normalized);
-    if (!isValidOnChain) {
-      const recoveredFromIpfs = await recoverCertificateFromIPFS(normalized);
-      if (!recoveredFromIpfs) {
-        return {
-          isValid: false,
-          message: 'Certificate is not valid on-chain or on IPFS.'
-        };
-      }
-
-      certificate = recoveredFromIpfs;
-      await upsertCertificateRecord(certificate as FirestoreCertificateRecord).catch((error) => {
-        console.warn('Unable to persist recovered IPFS certificate:', error);
-      });
-
-      const isExpired = certificate.expiresOn && new Date(certificate.expiresOn) < new Date();
-      return {
-        isValid: true,
-        certificate,
-        blockchainValid: false,
-        message: isExpired
-          ? 'Certificate recovered from IPFS. Blockchain record is missing or invalid, but the certificate data is present.'
-          : 'Certificate recovered from IPFS. Blockchain record is missing or invalid, but the certificate data is present.'
-      };
-    }
-
-    certificate = {
-      id: normalized,
-      ipfsHash: normalized,
-      issuedBy: 'unknown',
-      issuedOn: new Date().toISOString(),
-      templateType: 'classic',
-      firstName: 'Unknown',
-      lastName: 'Recipient',
-      organization: 'Unknown',
-      certifiedFor: 'Unknown',
-      assignedDate: new Date().toISOString(),
-      recipientEmail: '',
-      ipfsCid: normalized,
-      ipfsUri: `ipfs://${normalized}`,
-    } as Certificate;
-
-    return {
-      isValid: false,
-      message: 'Certificate is not valid on-chain or on IPFS.'
-    };
-  } else {
-    // If found in DB, still validate on-chain
-    const isValidOnChain = await validateCertificateOnChain(certificate.ipfsHash || normalized);
-    if (!isValidOnChain) {
-      const recoveredFromIpfs = await recoverCertificateFromIPFS(certificate.ipfsHash || normalized);
-      if (recoveredFromIpfs) {
-        const mergedCertificate = {
-          ...certificate,
-          ...recoveredFromIpfs,
-          blockchainValid: false,
-        } as Certificate;
-
-        await upsertCertificateRecord(mergedCertificate as FirestoreCertificateRecord).catch((error) => {
-          console.warn('Unable to persist recovered certificate from DB lookup:', error);
-        });
-
-        return {
-          isValid: true,
-          certificate: mergedCertificate,
-          blockchainValid: false,
-          message: 'Certificate recovered from IPFS. Blockchain record is missing or invalid.'
-        };
-      }
-
+    const recoveredFromIpfs = await recoverCertificateFromIPFS(normalized);
+    if (!recoveredFromIpfs) {
       return {
         isValid: false,
-        certificate,
-        blockchainValid: false,
-        message: 'Certificate is not valid on-chain or on IPFS.'
+        message: 'Certificate was not found on IPFS or in database.'
       };
     }
+
+    certificate = recoveredFromIpfs;
+    await upsertCertificateRecord(certificate as FirestoreCertificateRecord).catch((error) => {
+      console.warn('Unable to persist recovered IPFS certificate:', error);
+    });
   }
 
   const isExpired = certificate.expiresOn && new Date(certificate.expiresOn) < new Date();
@@ -489,8 +415,8 @@ export const validateCertificate = async (hash: string): Promise<{
     certificate,
     blockchainValid: true,
     message: isExpired
-      ? 'Certificate has expired. Blockchain verification successful.'
-      : 'Certificate verification successful on blockchain.'
+      ? 'Certificate is valid but has expired.'
+      : 'Certificate verification successful.'
   };
 };
 

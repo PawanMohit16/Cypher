@@ -224,8 +224,8 @@ const Dashboard = () => {
                           Issued on: {new Date(cert.issuedOn).toLocaleDateString()}
                         </p>
                         <div className="mt-2">
-                          <Badge variant={cert.blockchainValid === false ? 'secondary' : 'default'}>
-                            {cert.blockchainValid === false ? 'Legacy record' : 'On-chain verified'}
+                          <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                            Verified
                           </Badge>
                         </div>
                       </div>

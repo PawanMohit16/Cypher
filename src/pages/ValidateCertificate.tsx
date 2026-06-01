@@ -42,7 +42,7 @@ const ValidateCertificate = () => {
     
     try {
       setIsValidating(true);
-      // First, validate on-chain (blockchain is the source of truth)
+      // Validate certificate (IPFS & Firestore index check)
       const result = await validateCertificate(hash);
 
       setValidation({
@@ -169,7 +169,7 @@ const ValidateCertificate = () => {
                       {validation.isValid && certificate && (
                         <div className="mt-4">
                           <div className="flex items-center mb-2">
-                            <h4 className="text-sm font-medium text-gray-700">Blockchain Verification:</h4>
+                            <h4 className="text-sm font-medium text-gray-700">Verification Status:</h4>
                             <div className="ml-2">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                                 <ShieldCheck className="w-3 h-3 mr-1" /> Verified
